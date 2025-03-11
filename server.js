@@ -1,11 +1,14 @@
 const Settings = require("./models/settings");
 const Order = require("./models/order");
+const Wallet = require("./models/walletFlow");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const Product = require("./models/product");
 const getLeads = require("./getLeads"); // Import the getLeads function
 const cloudinary = require("cloudinary").v2; // Import Cloudinary
 const config = require("./config");
+const { checkPaymentStatus } = require("./processPendingPayment");
+const Money = require("./models/money");
 
 
 // Configure Cloudinary
@@ -23,11 +26,42 @@ exports.scheduledTask = async (req, res) => {
       await mongoose.connect(config.MONGO_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
+        connectTimeoutMS: 10000,
       });
       console.log("Connected to MongoDB");
     }
 
-    // Step 1: Check the value of automaticVariable from Settings
+    const pendingInvoices = await Money.find({
+      status: "PENDING",
+      paymentMode: "PAYMENT_GATEWAY",
+    });
+
+    for (const invoice of pendingInvoices) {
+      const merchantReferenceId = invoice.transactionId;
+      const userId = invoice.userId;
+
+      if (!merchantReferenceId) {
+        console.warn("Missing transactionId in a pending order, skipping...");
+        continue;
+      }
+
+      console.log(`Processing transaction: ${merchantReferenceId}`);
+
+      const result = await checkPaymentStatus(merchantReferenceId, userId);
+
+      console.log(result);
+
+      if (result.error) {
+        console.error(
+          `Failed to process transaction ${merchantReferenceId}: ${result.error}`
+        );
+      } else {
+        console.log(
+          `Transaction ${merchantReferenceId} processed successfully: ${result.success}`
+        );
+      }
+    }
+
     const settings = await Settings.findOne();
     if (!settings || !settings.automaticVariable) {
       console.log("Cron job skipped as automaticVariable is false or not set.");
@@ -36,7 +70,6 @@ exports.scheduledTask = async (req, res) => {
 
     console.log("Processing pending orders...");
 
-    // Step 2: Fetch all pending orders
     const pendingOrders = await Order.find({ status: "PENDING" });
 
     // Process orders one by one
@@ -54,7 +87,7 @@ exports.scheduledTask = async (req, res) => {
       // Process each product one by one within the order
       for (let index = 0; index < products.length; index++) {
         const product = products[index];
-        const { name, quantity } = product;
+        const { productId, name,  } = product;
 
         try {
           // If the file already exists, skip extraction and uploading
@@ -107,6 +140,14 @@ exports.scheduledTask = async (req, res) => {
           { orderId },
           { status: "SUCCESS", files: uploadedFiles }
         );
+        const wallet = await Wallet.findOne({ moneyId: orderId });
+        if (wallet) {
+          wallet.status = "SUCCESS";
+          await wallet.save();
+          console.log(`Wallet status updated to SUCCESS for moneyId: ${orderId}`);
+        } else {
+          console.log(`No wallet record found for moneyId: ${orderId}`);
+        }
       } else {
         console.log(`Some products failed in order ${orderId}`);
         await Order.updateOne(
