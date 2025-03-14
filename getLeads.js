@@ -8,7 +8,7 @@ const config = require("./config");
 async function getLeads(productName, productId, numOfLines) {
   try {
     // Step 1: Fetch product details
-    const product = await Product.findUnique({ id : productId });
+    const product = await Product.findOne({ _id : productId });
     
     if (!product) {
       throw new Error(`Invalid product: product "${productName}" not found`);

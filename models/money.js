@@ -1,54 +1,38 @@
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-const moneySchema = new mongoose.Schema(
+const MoneySchema = new Schema(
   {
-    id: {
+    name: { type: String, required: true },
+    amount: { type: String, default: null },
+    walletId: { type: String, required: true },
+    upiId: { type: String, required: true },
+    payment_method_id: { type: String, required: true },
+    accountNumber: { type: String, default: null },
+    accountType: { type: String, default: null },
+    paymentType: {
       type: String,
-      default: () => new mongoose.Types.ObjectId(),
+      enum: ["MANUAL", "PAYMENT_GATEWAY"],
+      default: "PAYMENT_GATEWAY",
     },
-    name: {
+    bankName: { type: String, default: null },
+    ifscCode: { type: String, default: null },
+    transactionId: { type: String, unique: true, required: true },
+    public_id: { type: String, unique: true, default: null },
+    secure_url: { type: String, default: null },
+    purpose: {
       type: String,
+      enum: ["ADD_MONEY", "WITHDRAWAL", "ADMIN", "ORDER"],
       required: true,
     },
-    amount: {
-      type: String,
-      default: null,
-    },
-    upiid: {
-      type: String,
-      required: true,
-    },
-    accountNumber: {
-      type: String,
-      default: null,
-    },
-    transactionId: {
-      type: String,
-      unique: true,
-      required: true,
-    },
-    public_id: {
-      type: String,
-      unique: true,
-      required: true,
-    },
-    secure_url: {
-      type: String,
-      required: true,
-    },
-    reason: {
-      type: String,
-      default: null,
-    },
-    paymentProces: {
-      type: Boolean,
-      default: false,
-    },
+    failureReason: { type: String, default: null },
+    paymentProces: { type: Boolean, default: false },
     paymentMode: {
       type: String,
       enum: ["MANUAL", "PAYMENT_GATEWAY"],
       required: true,
     },
+    counter: { type: Number, default: 0 },
     status: {
       type: String,
       enum: ["PENDING", "SUCCESS", "FAILED"],
@@ -58,22 +42,20 @@ const moneySchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    counter: {
-      type: Number,
-      required: false,
-      default: 0,
-    },
-    User: {
+    domainId: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now },
+    walletFlow: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: false,
+      ref: "WalletFlow",
+      default: null,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
+    paymentMetaData: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PaymentMetaData",
+      default: null,
     },
   },
   { collection: "Money" }
 );
 
-module.exports = mongoose.model("Money", moneySchema);
+module.exports = mongoose.model("Money", MoneySchema);

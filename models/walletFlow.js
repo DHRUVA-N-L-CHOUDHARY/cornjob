@@ -1,25 +1,20 @@
 const mongoose = require("mongoose");
 
-const walletFlowSchema = new mongoose.Schema(
+const WalletFlowSchema = new mongoose.Schema(
   {
-    id: {
-      type: String,
-      default: () => new mongoose.Types.ObjectId().toString(),
-      alias: "_id", 
-    },
     moneyId: {
       type: String,
       unique: true,
       required: true,
     },
-    userId: {
+    walletId: {
       type: String,
       required: true,
     },
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
+    userId: {
+      type: String,
+      required: true,
       ref: "User", 
-      required: false,
     },
     amount: {
       type: Number,
@@ -27,11 +22,12 @@ const walletFlowSchema = new mongoose.Schema(
     },
     purpose: {
       type: String,
-      default: null,
+      enum: ["ADD_MONEY", "WITHDRAWAL", "ADMIN", "ORDER"], 
+      required: true,
     },
     status: {
       type: String,
-      enum: ["PENDING", "SUCCESS", "FAILED"], 
+      enum: ["PENDING", "SUCCESS", "FAILED", "TERMINATED"], 
       default: "PENDING",
     },
     createdAt: {
@@ -44,7 +40,9 @@ const walletFlowSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { collection: "WalletFlow" }
+  {
+    collection : "WalletFlow",
+  }
 );
 
-module.exports = mongoose.model("WalletFlow", walletFlowSchema);
+module.exports = mongoose.model("WalletFlow", WalletFlowSchema);

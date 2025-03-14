@@ -1,11 +1,10 @@
 const axios = require("axios");
 const PaymentMetadata = require("./models/paymentMetadata");
 const Money = require("./models/money");
-const BankDetails = require("./models/bankDetails");
 const walletFlow = require("./models/walletFlow");
-const User = require("./models/user");
+const wallet = require("./models/wallet");
 
-const checkPaymentStatus = async (merchantReferenceId, userId) => {
+const checkPaymentStatus = async (merchantReferenceId, userId, walletId) => {
   try {
     console.log(userId);
     const moneyRecord = await Money.findOne({
@@ -58,18 +57,19 @@ const checkPaymentStatus = async (merchantReferenceId, userId) => {
       }
 
       if (txnStatus === "SUCCESS") {
-        const bankDetails = await BankDetails.findOne().sort({ createdAt: -1 });
+        const bankDetails = await wallet.find({ _id : walletId});
 
         if (!bankDetails) {
           await updateRecordFailure(merchantReferenceId);
           return {
-            error: "Bank details not found for processing the transaction.",
+            error: "Bank details not found for processing the transaction..",
           };
         }
 
         const addMoneyResult = await AddMoney(
           merchantReferenceId,
           userId,
+          walletId,
           data?.amount.toString(),
           merchantReferenceId
         );
@@ -154,7 +154,13 @@ const updateRecordSucess = async (merchantReferenceId) => {
   );
 };
 
-const AddMoney = async (transactionId, userId, amount, merchantReferenceId) => {
+const AddMoney = async (
+  transactionId,
+  userId,
+  walletId,
+  amount,
+  merchantReferenceId
+) => {
   if (!userId || !transactionId || !amount) {
     return { error: "Invalid data provided." };
   }
@@ -162,16 +168,16 @@ const AddMoney = async (transactionId, userId, amount, merchantReferenceId) => {
   try {
     const updatedMoney = Number(amount);
 
-    const user = await User.findOne({ _id: userId });
+    const walletDetails = await wallet.findOne({ _id: walletId });
 
-    if (!user) {
-      return { error: "User not found." };
+    if (!walletDetails) {
+      return { error: "Wallet not found." };
     }
 
-    const totalMoney = Number(user.totalMoney);
+    const totalMoney = Number(walletDetails.balance);
 
-    await User.findByIdAndUpdate(userId, {
-      totalMoney: totalMoney + updatedMoney,
+    await wallet.findByIdAndUpdate(walletId, {
+      balance: totalMoney + updatedMoney,
     });
 
     await updateRecordSucess(merchantReferenceId);
