@@ -5,10 +5,10 @@ const fs = require("fs");
 const { parse } = require("json2csv");
 const config = require("./config");
 
-async function getLeads(productName, productId, numOfLines) {
+async function getLeads(productName, numOfLines) {
   try {
     // Step 1: Fetch product details
-    const product = await Product.findUnique({ id : productId });
+    const product = await Product.findOne({ productName });
     
     if (!product) {
       throw new Error(`Invalid product: product "${productName}" not found`);

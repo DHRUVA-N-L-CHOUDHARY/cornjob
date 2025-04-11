@@ -87,7 +87,7 @@ exports.scheduledTask = async (req, res) => {
       // Process each product one by one within the order
       for (let index = 0; index < products.length; index++) {
         const product = products[index];
-        const { productId, name,  } = product;
+        const { name, quantity } = product;
 
         try {
           // If the file already exists, skip extraction and uploading
@@ -140,14 +140,6 @@ exports.scheduledTask = async (req, res) => {
           { orderId },
           { status: "SUCCESS", files: uploadedFiles }
         );
-        const wallet = await Wallet.findOne({ moneyId: orderId });
-        if (wallet) {
-          wallet.status = "SUCCESS";
-          await wallet.save();
-          console.log(`Wallet status updated to SUCCESS for moneyId: ${orderId}`);
-        } else {
-          console.log(`No wallet record found for moneyId: ${orderId}`);
-        }
       } else {
         console.log(`Some products failed in order ${orderId}`);
         await Order.updateOne(
